@@ -226,8 +226,8 @@ int main()
 
 	cudaDeviceProp prop;
 	int count = 0;
-	cudaStatus = cudaGetDeviceCount(&count);
-	cudaStatus = cudaGetDeviceProperties(&prop, 0);
+	cudaGetDeviceCount(&count);
+	cudaGetDeviceProperties(&prop, 0);
 	printf("Dane urz¹dzenia: %d\n", 0);
 	printf("Numer: %d\n", 0);
 	printf("Nazwa: %s\n", prop.name);
@@ -300,7 +300,7 @@ int main()
 		printf("Czas przesy³ania 256 MiB char z CPU do GPU w ms: %f\n", timer);
 
 		cudaEventRecord(start, 0);
-		cudaMemcpy(MiB1charCPU, MiB1charGPU, 1024 * 1024, cudaMemcpyDeviceToHost); //CPU to GPU
+		cudaMemcpy(MiB1charCPU, MiB1charGPU, 1024 * 1024, cudaMemcpyDeviceToHost); //GPU to CPU
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&timer, start, stop);
@@ -520,7 +520,7 @@ int main()
 		printf("Czas przesy³ania 8 MiB double z CPU do GPU: %f\n", timer);
 
 		cudaEventRecord(start, 0);
-		cudaMemcpy(MiB96doubleGPU, MiB96doubleCPU, 96 * 1024 * 1024 * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(MiB96doubleGPU, MiB96doubleCPU, 96 * 1024 * 1024, cudaMemcpyHostToDevice);
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaEventElapsedTime(&timer, start, stop);
@@ -1538,8 +1538,7 @@ int main()
 	}
 #endif
 #ifdef ZADANIE5
-	float *MiB1floatGPU, *MiB8floatGPU, *MiB96floatGPU, *MiB256floatGPU, *resFloatGPU;
-	double *MiB1doubleGPU, *MiB8doubleGPU, *MiB96doubleGPU, *MiB2566doubleGPU, *resDoubleGPU;
+	float *MiB1floatGPU, *MiB8floatGPU, *MiB96floatGPU, *MiB128floatGPU, *resFloatGPU;
 
 	cudaSetDevice(0);
 
@@ -1559,8 +1558,8 @@ int main()
 		cudaMalloc(&MiB1floatGPU, 1024 * 1024);
 		cudaMalloc(&MiB8floatGPU, 8 * 1024 * 1024);
 		cudaMalloc(&MiB96floatGPU, 96 * 1024 * 1024);
-		cudaMalloc(&MiB256floatGPU, 256 * 1024 * 1024);
-		cudaMalloc(&resFloatGPU, 256 * 1024 * 1024);
+		cudaMalloc(&MiB128floatGPU, 128 * 1024 * 1024);
+		cudaMalloc(&resFloatGPU, 128 * 1024 * 1024);
 
 		size = 1024 * 1024 / sizeof(float);
 		n = floor(sqrt(size));
@@ -1598,18 +1597,18 @@ int main()
 		cudaEventElapsedTime(&timer, start, stop);
 		printf("Czas mno¿enia macierzy 1MiB float na GPU w ms: %f\n", timer);
 
-
+		
 		size = 8 * 1024 * 1024 / sizeof(float);
 		n = floor(sqrt(size));
 		numBlocks = ceil(sqrt((size + blockSizeX * blockSizeY - 1) / (blockSizeX * blockSizeY)));
-		dim3 blocks4(numBlocks, numBlocks);
+		dim3 blocks8(numBlocks, numBlocks);
 
 		resDesc.res.linear.devPtr = MiB8floatGPU;
 		resDesc.res.linear.sizeInBytes = 8 * 1024 * 1024;
 		cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
 
 		cudaEventRecord(start, 0);
-		addMatrixKernel << <blocks4, threads >> > (resFloatGPU, tex, tex, n);
+		addMatrixKernel << <blocks8, threads >> > (resFloatGPU, tex, tex, n);
 		cudaThreadSynchronize();
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
@@ -1618,7 +1617,7 @@ int main()
 		printf("Czas dodawania macierzy 8MiB float na GPU w ms: %f\n", timer);
 
 		cudaEventRecord(start, 0);
-		mulMatrixKernel << <blocks4, threads >> > (resFloatGPU, tex, tex, n);
+		mulMatrixKernel << <blocks8, threads >> > (resFloatGPU, tex, tex, n);
 		cudaThreadSynchronize();
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
@@ -1630,14 +1629,14 @@ int main()
 		size = 96 * 1024 * 1024 / sizeof(float);
 		n = floor(sqrt(size));
 		numBlocks = ceil(sqrt((size + blockSizeX * blockSizeY - 1) / (blockSizeX * blockSizeY)));
-		dim3 blocks8(numBlocks, numBlocks);
+		dim3 blocks96(numBlocks, numBlocks);
 
 		resDesc.res.linear.devPtr = MiB96floatGPU;
 		resDesc.res.linear.sizeInBytes = 96 * 1024 * 1024;
 		cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
 
 		cudaEventRecord(start, 0);
-		addMatrixKernel << <blocks8, threads >> > (resFloatGPU, tex, tex, n);
+		addMatrixKernel << <blocks96, threads >> > (resFloatGPU, tex, tex, n);
 		cudaThreadSynchronize();
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
@@ -1646,46 +1645,46 @@ int main()
 		printf("Czas dodawania macierzy 96MiB float na GPU w ms: %f\n", timer);
 
 		cudaEventRecord(start, 0);
-		mulMatrixKernel << <blocks8, threads >> > (resFloatGPU, tex, tex, n);
+		mulMatrixKernel << <blocks96, threads >> > (resFloatGPU, tex, tex, n);
 		cudaThreadSynchronize();
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaDeviceSynchronize();
 		cudaEventElapsedTime(&timer, start, stop);
 		printf("Czas mno¿enia macierzy 96MiB float na GPU w ms: %f\n", timer);
+		
 
-
-		size = 256 * 1024 * 1024 / sizeof(float);
+		size = 128 * 1024 * 1024 / sizeof(float);
 		n = floor(sqrt(size));
 		numBlocks = ceil(sqrt((size + blockSizeX * blockSizeY - 1) / (blockSizeX * blockSizeY)));
-		dim3 blocks16(numBlocks, numBlocks);
+		dim3 blocks128(numBlocks, numBlocks);
 
-		resDesc.res.linear.devPtr = MiB256floatGPU;
-		resDesc.res.linear.sizeInBytes = 256 * 1024 * 1024;
+		resDesc.res.linear.devPtr = MiB128floatGPU;
+		resDesc.res.linear.sizeInBytes = 128 * 1024 * 1024;
 		cudaCreateTextureObject(&tex, &resDesc, &texDesc, NULL);
 
 		cudaEventRecord(start, 0);
-		addMatrixKernel << <blocks16, threads >> > (resFloatGPU, tex, tex, n);
+		addMatrixKernel << <blocks128, threads >> > (resFloatGPU, tex, tex, n);
 		cudaThreadSynchronize();
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaDeviceSynchronize();
 		cudaEventElapsedTime(&timer, start, stop);
-		printf("Czas dodawania macierzy 256MiB float na GPU w ms: %f\n", timer);
+		printf("Czas dodawania macierzy 128MiB float na GPU w ms: %f\n", timer);
 
 		cudaEventRecord(start, 0);
-		mulMatrixKernel << <blocks16, threads >> > (resFloatGPU, tex, tex, n);
+		mulMatrixKernel << <blocks128, threads >> > (resFloatGPU, tex, tex, n);
 		cudaThreadSynchronize();
 		cudaEventRecord(stop, 0);
 		cudaEventSynchronize(stop);
 		cudaDeviceSynchronize();
 		cudaEventElapsedTime(&timer, start, stop);
-		printf("Czas mno¿enia macierzy 256MiB float na GPU w ms: %f\n", timer);
+		printf("Czas mno¿enia macierzy 128MiB float na GPU w ms: %f\n", timer);
 
 		cudaFree(MiB1floatGPU);
 		cudaFree(MiB8floatGPU);
 		cudaFree(MiB96floatGPU);
-		cudaFree(MiB256floatGPU);
+		cudaFree(MiB128floatGPU);
 		cudaFree(resFloatGPU);
 	}
 #endif
